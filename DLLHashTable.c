@@ -2,6 +2,8 @@
 #include<stdio.h>
 #include<string.h>
 #include<stdlib.h>
+#include"proj1lib.h"
+#include"DLLHashTable.h"
 
 struct HashMap *hashTable = NULL;
 int eleCount = 0;
