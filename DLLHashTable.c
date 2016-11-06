@@ -6,42 +6,31 @@
 #include"DLLHashTable.h"
 
 struct HashMap *hashTable = NULL;
-int eleCount = 0;
 
-struct HashNode * createNode(int key, int data){
-  struct HashNode *newNode;
-  newNode = (struct HashNode *)malloc(sizeof(struct HashNode));
-  newNode->key = key;
-  newNode->data = data;
-  newNode->next = NULL;
-  newNode->prev = NULL;
-  return newNode;
-}
-
-void insertToHash(int key, int data){
-  int hashIndex = key % eleCount; //NEED TO CHANGE THIS TO BE THE INDEX THAT I WANT
-  struct HashNode *newNode = createNode(key, data);
+void insertToHash(RTOS_TMR *tmr){
+  int hashIndex = tmr->RTOSTmrDly % hashTable->RTOSTmrTickCtr;
+  //struct HashNode *newNode = createNode(key, data);
   //head of list for bucket with index hashIndex
-  if(!hashTable[hashIndex].head){
-    hashTable[hashIndex].head = newNode;
-    hashTable[hashIndex].count = 1;
+  if(!hashTable[hashIndex].RTOSTmrListPtr){
+    hashTable[hashIndex].RTOSTmrListPtr = tmr;
+    hashTable[hashIndex].RTOSTmrListEntries = 1;
     return;
   }
-  //adding new node to list NEED TO UPDATE TO INCLUDE PREV POINTER
-  newNode->next = (hashTable[hashIndex].head);
-  (hashTable[hashIndex].head)->prev = newNode;
+  //adding new node to list
+  tmr->RTOSTmrNext = (hashTable[hashIndex].RTOSTmrListPtr);
+  (hashTable[hashIndex].RTOSTmrListPtr)->RTOSTmrPrev = tmr;
   //update the head of the list and the number of nodes in current bucket
-  hashTable[hashIndex].head = newNode;
-  hashTable[hashIndex].count++;
+  hashTable[hashIndex].RTOSTmrListPtr = tmr;
+  hashTable[hashIndex].RTOSTmrListEntries++;
   return;
 }
 
-void deleteFromHash(int key){
+void deleteFromHash(RTOS_TMR *tmr){
   //find bucket using hash INDEX
-  int hashIndex = key % eleCount, flag = 0;
-  struct HashNode *temp, *myNode;
+  int hashIndex = tmr->RTOSTmrDly % hashTable->RTOSTmrTickCtr, flag = 0;
+  RTOS_TMR *temp, *myNode;
   //get list head from current bucket
-  myNode = hashTable[hashIndex].head;
+  myNode = hashTable[hashIndex].RTOSTmrListPtr;
   if(!myNode){
     printf("given data not found in hash table\n");
     return;
@@ -49,24 +38,25 @@ void deleteFromHash(int key){
   temp = myNode;
   while(myNode != NULL){
     //delete node with given key
-    if(myNode->key == key){
+    if(myNode->RTOSTmrDly == tmr->RTOSTmrDly){
       flag = 1;
-      if(myNode == hashTable[hashIndex].head){
-        hashTable[hashIndex].head = myNode->next;
-        myNode->next->prev = NULL;
+      if(myNode == hashTable[hashIndex].RTOSTmrListPtr){
+        hashTable[hashIndex].RTOSTmrListPtr = myNode->RTOSTmrNext;
+        (hashTable[hashIndex].RTOSTmrListPtr)->RTOSTmrPrev = NULL;
       }
-      else if(myNode->next == NULL){
-        temp->next = myNode->next;
+      else if(myNode->RTOSTmrNext == NULL){
+        temp->RTOSTmrNext = myNode->RTOSTmrNext; //or NULL
       }
       else{
-        temp->next = myNode->next;
-        myNode->next->prev = temp;
+        temp->RTOSTmrNext = myNode->RTOSTmrNext;
+        RTOS_TMR *temp2 = myNode->RTOSTmrNext;
+        temp2->RTOSTmrPrev = temp;
       }
-      hashTable[hashIndex].count--;
+      hashTable[hashIndex].RTOSTmrListEntries--;
       free(myNode);
     }
     temp = myNode;
-    myNode = myNode->next;
+    myNode = myNode->RTOSTmrNext;
   }
   if(flag){
     printf("data deletion successful\n");

@@ -6,22 +6,16 @@
 #include<stdlib.h>
 #include"proj1lib.h"
 
-extern int eleCount;
-
-struct HashNode{
-  int data, key;
-  struct HashNode *next, *prev;
-};
-
 struct HashMap{
-  struct HashNode *head;
-  int count;
+  RTOS_TMR *RTOSTmrListPtr;            //head of DLL of timers
+  int RTOSTmrListEntries;          //current number of entries in the list, starts at 0;
+  INT32U RTOSTmrTickCtr;           //number of times the timer task has been signaled, starts at 0, basically a global count
 };
 
-struct HashNode * createNode(int key, int data);
+extern struct HashMap *hashTable;
 
-void insertToHash(int key, int data);
-void deleteFromHash(int key);
+void insertToHash(RTOS_TMR *tmr);
+void deleteFromHash(RTOS_TMR *tmr);
 
 //dont really need search or display functions
 

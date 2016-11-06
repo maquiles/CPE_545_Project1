@@ -6,10 +6,6 @@
 #include"proj1lib.h"
 #include"DLLHashTable.h"
 
-extern int RTOSTmrListEntries;   //current number of entries in the list, starts at 0
-extern void *RTOSTmrListPtr;  //head of DLL of timers
-extern INT32U RTOSTmrTickCtr;    //number of times the timer task has been signaled, starts at 0, basically a global count
-
 extern INT8U perr_handler;           //keep track of timer errors
 
 RTOS_TMR *RTOSTmrCreate(INT32U dly, INT32U period, RTOS_TMR_OPT opt, RTOS_TMR_CALLBACK callback, void *callback_arg, INT8U *pname, RTOS_TMR_PERR *perr);

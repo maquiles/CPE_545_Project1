@@ -4,10 +4,6 @@
 #include"DLLHashTable.h"
 #include"timerAPI.h"
 
-int RTOSTmrListEntries = 0;   //current number of entries in the list, starts at 0
-void *RTOSTmrListPtr = NULL;  //head of DLL of timers
-INT32U RTOSTmrTickCtr = 0;    //number of times the timer task has been signaled, starts at 0, basically a global count
-
 INT8U perr_handler;           //keep track of timer errors
 
 /*
@@ -65,6 +61,8 @@ RTOS_TMR *RTOSTmrCreate(INT32U dly, INT32U period, RTOS_TMR_OPT opt, RTOS_TMR_CA
     timer->RTOSTmrPrev = NULL;
     timer->RTOSTmrState = RTOS_TMR_STATE_UNUSED;
     timer->RTOSTmrMatch = dly; //this is only true when the timer is created
+
+    insertToHash(timer); //add the newly created timer to the hash table
 
     return timer;
 }
@@ -143,7 +141,7 @@ INT8U RTOSTmrNameGet(RTOS_TMR *ptmr, INT8U **pdest, RTOS_TMR_PERR *perr){
  */
 
 INT32U RTOSTmrRemainGet(RTOS_TMR *ptmr, RTOS_TMR_PERR *perr){
-    return (ptmr->RTOSTmrMatch) - RTOSTmrTickCtr; //ticks to match - total ticks
+    return (ptmr->RTOSTmrMatch) - hashTable->RTOSTmrTickCtr; //ticks to match - total ticks
 }
 
 /*
