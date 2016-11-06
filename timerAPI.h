@@ -1,14 +1,14 @@
+#ifndef TIMERAPI_
+#define TIMERAPI_
+
 #include<stdio.h>
 #include<stdlib.h>
 #include"proj1lib.h"
 #include"DLLHashTable.h"
 
-#ifndef TIMERAPI_
-#define TIMERAPI_
-
-extern int RTOSTmrListEntries = 0;   //current number of entries in the list, starts at 0
-extern void *RTOSTmrListPtr = NULL;  //head of DLL of timers
-extern INT32U RTOSTmrTickCtr = 0;    //number of times the timer task has been signaled, starts at 0, basically a global count
+extern int RTOSTmrListEntries;   //current number of entries in the list, starts at 0
+extern void *RTOSTmrListPtr;  //head of DLL of timers
+extern INT32U RTOSTmrTickCtr;    //number of times the timer task has been signaled, starts at 0, basically a global count
 
 extern INT8U perr_handler;           //keep track of timer errors
 

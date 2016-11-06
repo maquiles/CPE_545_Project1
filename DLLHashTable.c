@@ -8,16 +8,6 @@
 struct HashMap *hashTable = NULL;
 int eleCount = 0;
 
-struct HashNode{
-  int data, key;
-  struct HashNode *next, *prev;
-};
-
-struct HashMap{
-  struct HashNode *head;
-  int count;
-};
-
 struct HashNode * createNode(int key, int data){
   struct HashNode *newNode;
   newNode = (struct HashNode *)malloc(sizeof(struct HashNode));
