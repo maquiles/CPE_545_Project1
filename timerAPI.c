@@ -1,10 +1,19 @@
 #include<stdio.h>
 #include<stdlib.h>
+#include<pthread.h>
 #include"proj1lib.h"
 #include"DLLHashTable.h"
 #include"timerAPI.h"
 
-INT8U perr_handler;           //keep track of timer errors
+RTOS_TMR_PERR perr_handler = RTOS_ERR_NONE;           //keep track of timer errors
+
+//function to check if there was an error and print it out
+RTOS_TMR_PERR check_error(){
+    if(perr_handler != RTOS_ERR_NONE){
+      printf("%u", perr_handler);
+    }
+    return perr_handler;
+}
 
 /*
  ************************************************************************************************************************
@@ -48,12 +57,19 @@ INT8U perr_handler;           //keep track of timer errors
  */
 
 RTOS_TMR *RTOSTmrCreate(INT32U dly, INT32U period, RTOS_TMR_OPT opt, RTOS_TMR_CALLBACK callback, void *callback_arg, INT8U *pname, RTOS_TMR_PERR *perr){
+
     RTOS_TMR *timer = (RTOS_TMR*)malloc(sizeof(RTOS_TMR));
 
     timer->RTOSTmrType = RTOS_TMR_TYPE;
     timer->RTOSTmrDly = dly;
+    if(dly<1){perr_handler = RTOS_ERR_TMR_INVALID_DLY;}
+
     timer->RTOSTmrPeriod = period;
+    if(period<1){perr_handler = RTOS_ERR_TMR_INVALID_PERIOD;}
+
     timer->RTOSTmrOpt = opt;
+    if(opt != RTOS_TMR_OPT_ONE_SHOT || opt != RTOS_TMR_OPT_PERIODIC){perr_handler = RTOS_ERR_TMR_INVALID_OPT;}
+
     timer->RTOSTmrCallback = callback;
     timer->RTOSTmrCallback = callback_arg;
     timer->RTOSTmrName = pname;
@@ -63,7 +79,7 @@ RTOS_TMR *RTOSTmrCreate(INT32U dly, INT32U period, RTOS_TMR_OPT opt, RTOS_TMR_CA
     timer->RTOSTmrMatch = dly; //this is only true when the timer is created
 
     insertToHash(timer); //add the newly created timer to the hash table
-
+    check_error();
     return timer;
 }
 
@@ -88,6 +104,15 @@ RTOS_TMR *RTOSTmrCreate(INT32U dly, INT32U period, RTOS_TMR_OPT opt, RTOS_TMR_CA
  */
 
 BOOLEAN RTOSTmrDel(RTOS_TMR *ptmr, RTOS_TMR_PERR *perr){
+    if(ptmr == NULL){perr_handler = RTOS_ERR_TMR_INVALID;}
+    if(ptmr->RTOSTmrState != RTOS_TMR_STATE_UNUSED ||
+       ptmr->RTOSTmrState != RTOS_TMR_STATE_RUNNING ||
+       ptmr->RTOSTmrState != RTOS_TMR_STATE_STOPPED ||
+       ptmr->RTOSTmrState != RTOS_TMR_STATE_COMPLETED){perr_handler = RTOS_ERR_TMR_INVALID_STATE;}
+    if(ptmr->RTOSTmrState == RTOS_TMR_STATE_UNUSED){perr_handler = RTOS_ERR_TMR_INACTIVE;}
+
+    check_error();
+    deleteFromHash(ptmr);
     free(ptmr);
     return RTOS_TRUE;
 }
@@ -115,7 +140,17 @@ BOOLEAN RTOSTmrDel(RTOS_TMR *ptmr, RTOS_TMR_PERR *perr){
  */
 
 INT8U RTOSTmrNameGet(RTOS_TMR *ptmr, INT8U **pdest, RTOS_TMR_PERR *perr){
+    if(ptmr == NULL){perr_handler = RTOS_ERR_TMR_INVALID;
+                     return 0;} //return 0 if the timer does not exist
+    if(pdest == NULL){perr_handler = RTOS_ERR_TMR_INVALID_DEST;}
+    if(ptmr->RTOSTmrState != RTOS_TMR_STATE_UNUSED ||
+       ptmr->RTOSTmrState != RTOS_TMR_STATE_RUNNING ||
+       ptmr->RTOSTmrState != RTOS_TMR_STATE_STOPPED ||
+       ptmr->RTOSTmrState != RTOS_TMR_STATE_COMPLETED){perr_handler = RTOS_ERR_TMR_INVALID_STATE;}
+    if(ptmr->RTOSTmrState == RTOS_TMR_STATE_UNUSED || ptmr->RTOSTmrState == RTOS_TMR_STATE_STOPPED){perr_handler = RTOS_ERR_TMR_INACTIVE;}
+
     pdest = &(ptmr->RTOSTmrName);
+    check_error();
     return sizeof(ptmr->RTOSTmrName)-1; //size of char -1 for NULL terminator
 }
 
@@ -141,6 +176,14 @@ INT8U RTOSTmrNameGet(RTOS_TMR *ptmr, INT8U **pdest, RTOS_TMR_PERR *perr){
  */
 
 INT32U RTOSTmrRemainGet(RTOS_TMR *ptmr, RTOS_TMR_PERR *perr){
+    if(ptmr == NULL){perr_handler = RTOS_ERR_TMR_INVALID;}
+    if(ptmr->RTOSTmrState != RTOS_TMR_STATE_UNUSED ||
+       ptmr->RTOSTmrState != RTOS_TMR_STATE_RUNNING ||
+       ptmr->RTOSTmrState != RTOS_TMR_STATE_STOPPED ||
+       ptmr->RTOSTmrState != RTOS_TMR_STATE_COMPLETED){perr_handler = RTOS_ERR_TMR_INVALID_STATE;}
+    if(ptmr->RTOSTmrState == RTOS_TMR_STATE_UNUSED || ptmr->RTOSTmrState == RTOS_TMR_STATE_STOPPED){perr_handler = RTOS_ERR_TMR_INACTIVE;}
+
+    check_error();
     return (ptmr->RTOSTmrMatch) - hashTable->RTOSTmrTickCtr; //ticks to match - total ticks
 }
 
@@ -169,6 +212,14 @@ INT32U RTOSTmrRemainGet(RTOS_TMR *ptmr, RTOS_TMR_PERR *perr){
  */
 
 INT8U RTOSTmrStateGet(RTOS_TMR *ptmr, RTOS_TMR_PERR *perr){
+    if(ptmr == NULL){perr_handler = RTOS_ERR_TMR_INVALID;}
+    if(ptmr->RTOSTmrState != RTOS_TMR_STATE_UNUSED ||
+       ptmr->RTOSTmrState != RTOS_TMR_STATE_RUNNING ||
+       ptmr->RTOSTmrState != RTOS_TMR_STATE_STOPPED ||
+       ptmr->RTOSTmrState != RTOS_TMR_STATE_COMPLETED){perr_handler = RTOS_ERR_TMR_INVALID_STATE;}
+    if(ptmr->RTOSTmrState == RTOS_TMR_STATE_UNUSED || ptmr->RTOSTmrState == RTOS_TMR_STATE_STOPPED){perr_handler = RTOS_ERR_TMR_INACTIVE;}
+
+    check_error();
     return ptmr->RTOSTmrState;
 }
 
@@ -193,8 +244,20 @@ INT8U RTOSTmrStateGet(RTOS_TMR *ptmr, RTOS_TMR_PERR *perr){
  */
 
 BOOLEAN RTOSTmrStart(RTOS_TMR *ptmr, RTOS_TMR_PERR *perr){
+  if(ptmr == NULL){perr_handler = RTOS_ERR_TMR_INVALID;}
+  if(ptmr->RTOSTmrState != RTOS_TMR_STATE_UNUSED ||
+     ptmr->RTOSTmrState != RTOS_TMR_STATE_RUNNING ||
+     ptmr->RTOSTmrState != RTOS_TMR_STATE_STOPPED ||
+     ptmr->RTOSTmrState != RTOS_TMR_STATE_COMPLETED){perr_handler = RTOS_ERR_TMR_INVALID_STATE;}
+  if(ptmr->RTOSTmrState == RTOS_TMR_STATE_UNUSED || ptmr->RTOSTmrState == RTOS_TMR_STATE_STOPPED){perr_handler = RTOS_ERR_TMR_INACTIVE;}
+
+  if(check_error() != RTOS_ERR_NONE){
+    return RTOS_FALSE;
+  }
+  else{
     ptmr->RTOSTmrState = RTOS_TMR_STATE_RUNNING;
     return RTOS_TRUE;
+  }
 }
 
 /*
@@ -233,6 +296,24 @@ BOOLEAN RTOSTmrStart(RTOS_TMR *ptmr, RTOS_TMR_PERR *perr){
  */
 
 BOOLEAN RTOSTmrStop(RTOS_TMR *ptmr, RTOS_TMR_STOP_OPT opt, void *callback_arg, RTOS_TMR_PERR *perr){
+    if(ptmr == NULL){perr_handler = RTOS_ERR_TMR_INVALID;
+                     return RTOS_FALSE;}
+    if(ptmr->RTOSTmrState != RTOS_TMR_STATE_UNUSED ||
+      ptmr->RTOSTmrState != RTOS_TMR_STATE_RUNNING ||
+      ptmr->RTOSTmrState != RTOS_TMR_STATE_STOPPED ||
+      ptmr->RTOSTmrState != RTOS_TMR_STATE_COMPLETED){perr_handler = RTOS_ERR_TMR_INVALID_STATE;
+                                                      return RTOS_FALSE;}
+    if(ptmr->RTOSTmrState == RTOS_TMR_STATE_UNUSED){perr_handler = RTOS_ERR_TMR_INACTIVE;
+                                                    return RTOS_FALSE;}
+    if(ptmr->RTOSTmrState == RTOS_TMR_STATE_STOPPED){perr_handler = RTOS_ERR_TMR_STOPPED;
+                                                     return RTOS_FALSE;}
+    if(ptmr->RTOSTmrCallback == NULL){perr_handler = RTOS_ERR_TMR_NO_CALLBACK;
+                                      return RTOS_FALSE;}
+    if(opt != RTOS_TMR_OPT_NONE ||
+       opt != RTOS_TMR_OPT_CALLBACK ||
+       opt != RTOS_TMR_OPT_CALLBACK_ARG){perr_handler = RTOS_ERR_TMR_INVALID_OPT;
+                                         return RTOS_FALSE;}
+
     if(opt == RTOS_TMR_OPT_CALLBACK_ARG){
         ptmr->RTOSTmrCallback(callback_arg);
     }
@@ -246,6 +327,7 @@ BOOLEAN RTOSTmrStop(RTOS_TMR *ptmr, RTOS_TMR_STOP_OPT opt, void *callback_arg, R
         //something is wrong
         //break and error message
         printf("something went wrong");
+        return RTOS_FALSE;
     }
 
     ptmr->RTOSTmrState = RTOS_TMR_STATE_STOPPED;
@@ -267,7 +349,5 @@ BOOLEAN RTOSTmrStop(RTOS_TMR *ptmr, RTOS_TMR_STOP_OPT opt, void *callback_arg, R
  */
 
 RTOS_TMR_PERR RTOSTmrSignal(void){
-    //not entirely sure what to do
-    //signal timet task to run through timers and update
     return RTOS_ERR_NONE;
 }
