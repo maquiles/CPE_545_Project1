@@ -9,7 +9,7 @@
 struct HashMap{
   RTOS_TMR *RTOSTmrListPtr;            //head of DLL of timers
   int RTOSTmrListEntries;          //current number of entries in the list, starts at 0;
-  INT32U RTOSTmrTickCtr;           //number of times the timer task has been signaled, starts at 0, basically a global count
+  int RTOSTmrTickCtr;           //number of times the timer task has been signaled, starts at 0, basically a global count
 };
 
 extern struct HashMap *hashTable;
